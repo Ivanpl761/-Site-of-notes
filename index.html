@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Мои задачи</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f4ef;color:#23352e;font:16px/1.5 system-ui,sans-serif}main{max-width:700px;margin:70px auto;padding:24px}.eyebrow{font-size:12px;letter-spacing:2px;font-weight:700;color:#66806e}h1{font-size:clamp(36px,7vw,52px);letter-spacing:-2px;margin:12px 0}header p{color:#6b756e;margin:0 0 32px}.card{background:white;border:1px solid #e2e6dc;border-radius:24px;padding:26px;box-shadow:0 12px 40px #293d2408}form{display:flex;gap:10px}input[type=text]{min-width:0;flex:1;border:1px solid #ccd4c9;border-radius:12px;padding:14px;font:inherit;background:#fafbf8}button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:12px 18px;background:#315e47;color:white;font-weight:600}button:hover{filter:brightness(.92)}:focus-visible{outline:3px solid #d29d3b;outline-offset:3px}.summary{display:flex;justify-content:space-between;align-items:center;margin:26px 0 12px;font-size:14px;color:#6b756e}ul{list-style:none;padding:0;margin:0}li{display:flex;align-items:center;gap:13px;padding:17px 0;border-top:1px solid #edf0e8}li label{display:flex;align-items:center;gap:13px;flex:1;min-width:0;cursor:pointer}li span{overflow-wrap:anywhere}input[type=checkbox]{width:21px;height:21px;flex-shrink:0;accent-color:#315e47}.done span{text-decoration:line-through;color:#8c958e}.delete{background:transparent;color:#8a716c;font-size:22px;padding:2px 10px;font-weight:400}.empty{text-align:center;padding:38px 8px;color:#778078}.empty b{display:block;color:#354d40;font-size:21px;margin-bottom:8px}.symbol{display:grid;place-items:center;margin:0 auto 16px;background:#315e47;border-radius:50%;width:56px;height:56px;font-size:26px;color:white}footer{font-size:13px;color:#7b837c;text-align:center;margin-top:24px}#notice{color:#9a4d34;font-size:14px;margin:10px 0 0}#notice:empty{display:none}@media(max-width:500px){main{margin:25px auto;padding:18px}.card{padding:18px}form{flex-wrap:wrap}form button{width:100%}h1{letter-spacing:-1px}}
+.edit{background:#edf3e8;color:#315e47;padding:8px 10px;font-size:14px}.edit-form{width:100%;flex-wrap:wrap}.edit-form input{flex-basis:100%}.edit-error{width:100%;color:#9a4d34;font-size:14px;margin:0}.edit-error:empty{display:none}li{flex-wrap:wrap}
+</style>
+</head>
+<body><main>
+<header><div class="eyebrow">ОДИН ШАГ ЗА ДРУГИМ</div><h1>Мои задачи<span style="color:#8da16c">.</span></h1><p>Освободи голову. Запиши важное и начни с малого.</p></header>
+<section class="card" aria-label="Список задач">
+<form id="form"><input id="task" type="text" aria-label="Новая задача" placeholder="Что хочешь сделать?" maxlength="300" autocomplete="off"><button type="submit">+ Добавить</button></form>
+<p id="notice" role="status"></p>
+<div class="summary"><span id="count" aria-live="polite"></span></div>
+<ul id="list"></ul><div class="empty" id="empty"><div class="symbol" aria-hidden="true">✓</div><b>Начни с одной задачи</b>Например: «Подготовиться к хакатону»</div>
+</section><footer>Задачи сохраняются в этом браузере на этом устройстве.</footer>
+</main>
+<script>
+const storageKey='hackathon-tasks-v1';
+const input=document.querySelector('#task'),list=document.querySelector('#list'),notice=document.querySelector('#notice');
+let tasks=[];
+try{const saved=JSON.parse(localStorage.getItem(storageKey)||'[]');if(Array.isArray(saved))tasks=saved.filter(t=>t&&typeof t.id==='string'&&typeof t.text==='string'&&typeof t.done==='boolean')}catch{notice.textContent='Не удалось прочитать сохранённые задачи.'}
+function save(){try{localStorage.setItem(storageKey,JSON.stringify(tasks))}catch{notice.textContent='Браузер не разрешил сохранение. Задачи доступны до закрытия страницы.'}}
+function render(){
+list.replaceChildren();
+tasks.forEach(t=>{const row=document.createElement('li'),label=document.createElement('label'),box=document.createElement('input'),text=document.createElement('span'),remove=document.createElement('button');
+row.className=t.done?'done':'';box.type='checkbox';box.checked=t.done;text.textContent=t.text;box.addEventListener('change',()=>{t.done=box.checked;save();render()});remove.className='delete';remove.type='button';remove.textContent='×';remove.setAttribute('aria-label','Удалить задачу: '+t.text);remove.addEventListener('click',()=>{tasks=tasks.filter(item=>item.id!==t.id);save();render();input.focus()});label.append(box,text);const edit=document.createElement('button');edit.type='button';edit.className='edit';edit.textContent='Изменить';edit.setAttribute('aria-label','Изменить задачу: '+t.text);
+edit.addEventListener('click',()=>{
+const form=document.createElement('form'),field=document.createElement('input'),submit=document.createElement('button'),cancel=document.createElement('button'),error=document.createElement('p');
+form.className='edit-form';field.type='text';field.value=t.text;field.maxLength=300;field.setAttribute('aria-label','Текст задачи');submit.type='submit';submit.textContent='Сохранить';cancel.type='button';cancel.className='edit';cancel.textContent='Отмена';error.className='edit-error';error.setAttribute('role','alert');
+const close=()=>{render();const restored=Array.from(list.querySelectorAll('button')).find(b=>b.getAttribute('aria-label')==='Изменить задачу: '+t.text);if(restored)restored.focus()};
+form.addEventListener('submit',e=>{e.preventDefault();const value=field.value.trim();if(!value){error.textContent='Текст задачи не может быть пустым.';field.focus();return}t.text=value;save();close()});cancel.addEventListener('click',close);field.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();close()}});form.append(field,submit,cancel,error);row.replaceChildren(form);field.focus();field.select();
+});row.append(label,edit,remove);list.append(row)});
+const completed=tasks.filter(t=>t.done).length;document.querySelector('#count').textContent=tasks.length?`Выполнено ${completed} из ${tasks.length}`:'Твой список пока пуст';document.querySelector('#empty').hidden=tasks.length>0;
+}
+document.querySelector('#form').addEventListener('submit',e=>{e.preventDefault();const text=input.value.trim();if(!text){notice.textContent='Сначала напиши задачу.';input.focus();return}notice.textContent='';tasks.push({id:crypto.randomUUID(),text,done:false});save();render();input.value='';input.focus()});render();
+</script></body></html>
